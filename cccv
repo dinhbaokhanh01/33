@@ -1,0 +1,222 @@
+1. pom.xml
+XML
+<project xmlns="[http://maven.apache.org/POM/4.0.0](http://maven.apache.org/POM/4.0.0)" 
+         xmlns:xsi="[http://www.w3.org/2001/XMLSchema-instance](http://www.w3.org/2001/XMLSchema-instance)" 
+         xsi:schemaLocation="[http://maven.apache.org/POM/4.0.0](http://maven.apache.org/POM/4.0.0) [http://maven.apache.org/maven-v4_0_0.xsd](http://maven.apache.org/maven-v4_0_0.xsd)">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.codegym</groupId>
+    <artifactId>servlet-calculator</artifactId>
+    <packaging>war</packaging>
+    <version>1.0-SNAPSHOT</version>
+    <name>Servlet Calculator Webapp</name>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- Jakarta Servlet API 6.0 (Tomcat 10+) -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>6.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Jakarta JSP API 3.1 -->
+        <dependency>
+            <groupId>jakarta.servlet.jsp</groupId>
+            <artifactId>jakarta.servlet.jsp-api</artifactId>
+            <version>3.1.1</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>servlet-calculator</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.4.0</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+2. src/main/java/com/codegym/model/Calculator.java
+Java
+package com.codegym.model;
+
+public class Calculator {
+    public static float calculate(float firstOperand, float secondOperand, char operator) {
+        switch (operator) {
+            case '+':
+                return firstOperand + secondOperand;
+            case '-':
+                return firstOperand - secondOperand;
+            case '*':
+                return firstOperand * secondOperand;
+            case '/':
+                if (secondOperand != 0) {
+                    return firstOperand / secondOperand;
+                } else {
+                    throw new ArithmeticException("Lỗi: Không thể chia cho 0 (Divide by zero)");
+                }
+            default:
+                throw new RuntimeException("Lỗi: Phép tính không hợp lệ");
+        }
+    }
+}
+3. src/main/java/com/codegym/controller/CalculatorServlet.java
+Java
+package com.codegym.controller;
+
+import com.codegym.model.Calculator;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+import java.io.IOException;
+
+@WebServlet(name = "CalculatorServlet", urlPatterns = "/calculate")
+public class CalculatorServlet extends HttpServlet {
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        
+        request.setCharacterEncoding("UTF-8");
+        
+        try {
+            float firstOperand = Float.parseFloat(request.getParameter("first-operand"));
+            float secondOperand = Float.parseFloat(request.getParameter("second-operand"));
+            char operator = request.getParameter("operator").charAt(0);
+
+            // Gọi logic tính toán từ Model
+            float result = Calculator.calculate(firstOperand, secondOperand, operator);
+
+            // Gửi dữ liệu kết quả sang trang result.jsp
+            request.setAttribute("firstOperand", firstOperand);
+            request.setAttribute("secondOperand", secondOperand);
+            request.setAttribute("operator", operator);
+            request.setAttribute("result", result);
+
+        } catch (NumberFormatException e) {
+            request.setAttribute("error", "Dữ liệu nhập vào phải là số hợp lệ!");
+        } catch (ArithmeticException | RuntimeException e) {
+            request.setAttribute("error", e.getMessage());
+        }
+
+        // Forward sang trang result.jsp để hiển thị
+        request.getRequestDispatcher("result.jsp").forward(request, response);
+    }
+}
+4. src/main/webapp/index.jsp
+Java
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Calculator</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; margin-top: 80px; background-color: #f4f6f9; }
+        .calculator-card { background: white; padding: 30px 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 350px; }
+        h2 { color: #1b2a7a; text-align: center; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #333; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        button { background-color: #1b2a7a; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; }
+        button:hover { background-color: #121c54; }
+    </style>
+</head>
+<body>
+    <div class="calculator-card">
+        <h2>Simple Calculator</h2>
+        <form action="calculate" method="POST">
+            <div class="form-group">
+                <label>First operand:</label>
+                <input type="number" step="any" name="first-operand" placeholder="Nhập số thứ nhất" required />
+            </div>
+
+            <div class="form-group">
+                <label>Operator:</label>
+                <select name="operator">
+                    <option value="+">Addition (+)</option>
+                    <option value="-">Subtraction (-)</option>
+                    <option value="*">Multiplication (*)</option>
+                    <option value="/">Division (/)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Second operand:</label>
+                <input type="number" step="any" name="second-operand" placeholder="Nhập số thứ hai" required />
+            </div>
+
+            <button type="submit">Calculate</button>
+        </form>
+    </div>
+</body>
+</html>
+5. src/main/webapp/result.jsp
+Java
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Result - Calculator</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; margin-top: 80px; background-color: #f4f6f9; }
+        .result-card { background: white; padding: 30px 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 380px; text-align: center; }
+        h2 { color: #1b2a7a; margin-bottom: 20px; }
+        .success-box { background-color: #e8f5e9; padding: 15px; border-radius: 6px; margin-top: 15px; }
+        .error-box { background-color: #ffebee; padding: 15px; border-radius: 6px; margin-top: 15px; color: #c0392b; }
+        .back-btn { display: inline-block; margin-top: 20px; padding: 10px 20px; background-color: #1b2a7a; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="result-card">
+        <h2>Result</h2>
+
+        <%-- Kiểm tra xem có thông báo lỗi hay không --%>
+        <% if (request.getAttribute("error") != null) { %>
+            <div class="error-box">
+                <h3 style="margin: 0 0 5px 0;">Tính toán thất bại!</h3>
+                <p style="margin: 0;"><%= request.getAttribute("error") %></p>
+            </div>
+        <% } else { %>
+            <p style="font-size: 16px; color: #555;">
+                Biểu thức: 
+                <b><%= request.getAttribute("firstOperand") %> <%= request.getAttribute("operator") %> <%= request.getAttribute("secondOperand") %></b>
+            </p>
+            <div class="success-box">
+                <h3 style="color: #27ae60; margin: 0;">Kết quả: <%= request.getAttribute("result") %></h3>
+            </div>
+        <% } %>
+
+        <a href="index.jsp" class="back-btn">Quay lại máy tính</a>
+    </div>
+</body>
+</html>
+6. src/main/webapp/WEB-INF/web.xml
+XML
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="[https://jakarta.ee/xml/ns/jakartaee](https://jakarta.ee/xml/ns/jakartaee)"
+         xmlns:xsi="[http://www.w3.org/2001/XMLSchema-instance](http://www.w3.org/2001/XMLSchema-instance)"
+         xsi:schemaLocation="[https://jakarta.ee/xml/ns/jakartaee](https://jakarta.ee/xml/ns/jakartaee) [https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd](https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd)"
+         version="6.0">
+
+    <display-name>Servlet Calculator</display-name>
+
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+
+</web-app>
